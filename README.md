@@ -6,7 +6,7 @@ Multi site provision setup.
 
 Clone the repo as the site name into your `www` directory in vvv.
 
-`git clone git@github.com:mrdink/vvv-provision-single.git example.dev && rm -rf example.dev/.git`
+`git clone git@github.com:mrdink/vvv-provision-multi.git example.dev && rm -rf example.dev/.git`
 
 * Add URL to `vvv-config.yml` or `vvv-custom.yml`
 * Update variables in `config/site-vars.sh`

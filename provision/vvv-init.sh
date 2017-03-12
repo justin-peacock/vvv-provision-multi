@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
-source ../config/site-vars.sh
-
 # Provision WordPress Stable
-echo "Commencing $site_name Site Setup"
 
 # Make a database, if we don't already have one
-echo "Creating $site_name database (if it's not already there)"
-mysql -u root --password=root -e "CREATE DATABASE IF NOT EXISTS $database"
-mysql -u root --password=root -e "GRANT ALL PRIVILEGES ON $database.* TO $dbuser@localhost IDENTIFIED BY '$dbpass';"
+echo -e "\nCreating database 'example_dev' (if it's not already there)"
+mysql -u root --password=root -e "CREATE DATABASE IF NOT EXISTS example_dev"
+mysql -u root --password=root -e "GRANT ALL PRIVILEGES ON example_dev.* TO wp@localhost IDENTIFIED BY 'wp';"
 echo -e "\n DB operations done.\n\n"
 
 # Nginx Logs
@@ -27,37 +24,35 @@ if [[ ! -d "${VVV_PATH_TO_SITE}/public_html" ]]; then
   cd ${VVV_PATH_TO_SITE}/public_html
 
   echo "Configuring WordPress Stable..."
-  noroot wp core config --dbname=$database --dbuser=$dbuser --dbpass=$dbpass --quiet --extra-php < ../config/wp-constants
+  noroot wp core config --dbname=example_dev --dbuser=wp --dbpass=wp --quiet --extra-php <<PHP
+// Match any requests made via xip.io.
+if ( isset( \$_SERVER['HTTP_HOST'] ) && preg_match('/^(example.)\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(.xip.io)\z/', \$_SERVER['HTTP_HOST'] ) ) {
+    define( 'WP_HOME', 'http://' . \$_SERVER['HTTP_HOST'] );
+    define( 'WP_SITEURL', 'http://' . \$_SERVER['HTTP_HOST'] );
+}
+
+define( 'WP_DEBUG', true );
+define( 'WP_DEBUG_DISPLAY', false );
+define( 'WP_DEBUG_LOG', true );
+define( 'SCRIPT_DEBUG', true );
+define( 'JETPACK_DEV_DEBUG', true );
 PHP
 
-    if ${subdomain};
+  echo "Installing WordPress Multisite..."
+  noroot wp core multisite-install --url=example.dev --quiet --title="Example" --admin_name=admin --admin_email="admin@local.dev" --admin_password="password"
 
-    then
-        echo "Installing WordPress Multisite with subdomains..."
-        noroot wp core multisite-install --url="$domain" --subdomains --quiet --title="$site_name" --admin_name="$admin_user" --admin_email="$admin_email" --admin_password="$admin_pass"
-    else
-        echo "Installing WordPress Multisite with subdirectory..."
-        noroot wp core multisite-install --url="$domain" --quiet --title="$site_name" --admin_name="$admin_user" --admin_email="$admin_email" --admin_password="$admin_pass"
-    fi
+  # Install all plugins in the plugins file using CLI
+#  noroot wp plugin install debug-bar
+#  noroot wp plugin install host-analyticsjs-local
+#  noroot wp plugin install jetpack
+#  noroot wp plugin install regenerate-thumbnails
+#  noroot wp plugin install theme-check
+#  noroot wp plugin install w3-total-cache
+#  noroot wp plugin install wp-force-login
 
-    # Install all plugins in the plugins file using CLI
-    if [ -f ../config/plugins ]
-
-    echo "Installing Plugins"
-
-    then
-        while IFS='' read -r line || [ -n "$line" ]
-        do
-            if [ "#" != ${line:0:1} ]
-            then
-                wp plugin install $line
-            fi
-        done < ../config/plugins
-    fi
-
-    echo "Uninstalling Plugins..."
-    noroot wp plugin uninstall hello
-    noroot wp plugin uninstall akismet
+#  echo "Uninstalling Plugins..."
+#  noroot wp plugin uninstall hello
+#  noroot wp plugin uninstall akismet
 
 else
 
